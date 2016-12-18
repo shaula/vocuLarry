@@ -1,0 +1,388 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <title>VocuLarry</title>
+        <link rel="manifest" href="manifest.json">
+
+        <meta name="description" content="Learn vocabularies with baskets.">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+        <link rel="apple-touch-icon" href="apple-touch-icon.png">
+        <!-- Place favicon.ico in the root directory -->
+
+        <link rel="stylesheet" href="css/main.css">
+
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400" rel="stylesheet">
+
+        <link rel="apple-touch-icon" sizes="57x57" href="icons/apple-touch-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="icons/apple-touch-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="icons/apple-touch-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="icons/apple-touch-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="icons/apple-touch-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="icons/apple-touch-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="icons/apple-touch-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-180x180.png">
+        <link rel="icon" type="image/png" href="icons/favicon-32x32.png" sizes="32x32">
+        <link rel="icon" type="image/png" href="icons/favicon-194x194.png" sizes="194x194">
+        <link rel="icon" type="image/png" href="icons/android-chrome-192x192.png" sizes="192x192">
+        <link rel="icon" type="image/png" href="icons/favicon-16x16.png" sizes="16x16">
+        <link rel="manifest" href="manifest.json">
+        <link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#5bbad5">
+        <link rel="shortcut icon" href="icons/favicon.ico">
+        <meta name="apple-mobile-web-app-title" content="VocuLarry">
+        <meta name="application-name" content="VocuLarry">
+        <meta name="msapplication-TileColor" content="#ffc40d">
+        <meta name="msapplication-TileImage" content="icons/mstile-144x144.png">
+        <meta name="msapplication-config" content="browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+    </head>
+    <body class="day">
+        <div id="app">
+            <header class="header">
+                <h1 @click="view = 'default'">VocuLarry</h1>
+            </header>
+
+            <section class="information"
+                     v-show="initialText"
+                     v-cloak>
+                <div>{{ initialText }}</div>
+            </section>
+
+            <section id="settings"
+                     v-show="!initialText"
+                     v-cloak>
+                <div class="settings-icon" @click="view = (view == 'settings') ? 'default' : 'settings'" :class="{ active: view == 'settings' }"></div>
+                <div v-show="view == 'settings'" class="view">
+                    <p>
+                        <h3>Training Mode</h3>
+                        <div>
+                            <label><input type="radio" name="training_mode" v-model="training.mode" value="default"> German → Bulgarian</label>
+                        </div>
+                        <div>
+                            <label><input type="radio" name="training_mode" v-model="training.mode" value="reverse"> Bulgarian → German</label>
+                        </div>
+                    </p>
+
+                    <p>
+                        <h3>Input helper</h3>
+                        <label>
+                            <input type="checkbox" v-model="settings.isKeyboardEnabled" />
+                            Use virtual keyboard
+                        </label>
+                    </p>
+
+                    <div class="actionBar">
+                        <button class="big" @click="view = 'default'">Go Back</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="conflict"
+                     v-show="view == 'conflict' && conflictValues.length"
+                     v-cloak>
+                A conflict occurred while syncing. Please resolve this issue by selecting the right versions:
+                <div v-for="value in conflictValues" class="conflictValue">
+                    <div><em>{{ value.label }}</em></div>
+                    <label class="current">
+                        <input type="radio" value="current" :name="value.field" v-model="value.use">
+                        <span>{{ value.current }}</span>
+                    </label>
+                    <label class="conflict" v-if="value.conflict">
+                        <input type="radio" value="conflict" :name="value.field" v-model="value.use">
+                        <span>{{ value.conflict }}</span>
+                    </label>
+                </div>
+
+                <div class="actionBar">
+                    <button class="big" @click="resolveConflict(conflictValues)">Resolve & Go Back</button>
+                </div>
+            </section>
+
+            <section id="listing"
+                     v-show="view == 'listing' && !editItem"
+                     :class="{ loading: loading.items }"
+                     v-cloak>
+                <div class="view">
+                    <h3>All vocabularies from "{{ training.active.lesson }}"</h3>
+                    <table class="lessons" v-show="lessons.length">
+                        <tbody>
+                        <tr v-for="item in listItems" class="item" @click="startEdit(item)">
+                            <td>
+                                {{ item.from }}
+                                <div class="note" v-if="item.fromNote">{{ item.fromNote }}</div>
+                            </td>
+                            <td>
+                                {{ item.to }}
+                                <div class="note" v-if="item.toNote">{{ item.toNote }}</div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="actionBar">
+                        <button class="big" @click="view = 'default'">Go Back</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="default"
+                     v-show="view == 'default' && !activeItem"
+                     v-cloak>
+                <p>Start another training session by choosing a lesson and a basket.</p>
+
+                <h2>Lessons</h2>
+                <div class="loading" v-show="loading.lessons">Loading...</div>
+                <ul class="lessons" v-show="lessons.length">
+                    <li v-for="lesson in lessons">
+                        <button type="button"
+                                class="lesson"
+                                :class="{ active: training.active.lesson == lesson, disabled: training.active.lesson != lesson }"
+                                @click="trainLesson(lesson)">
+                            {{ lesson }}
+                        </button>
+                    </li>
+                </ul>
+                <div class="basketBar" :class="{ loading: loading.register }">
+                    <div class="basket" title="first basket"
+                         :class="{
+                             active: training.active.register == 1,
+                             disabled: training.active.register != 1 && registerLength[1] == 0
+                         }"
+                         @click="trainRegister(1)">
+                        {{ registerLength[1] }}
+                        <div class="active" v-show="training.active.register == 1">{{ training.active.ids.length }}</div>
+                    </div>
+
+                    <div class="basket" title="second basket"
+                         :class="{
+                             active: training.active.register == 2,
+                             disabled: training.active.register != 2 && registerLength[2] == 0
+                         }"
+                         @click="trainRegister(2)">
+                        {{ registerLength[2] }}
+                        <div class="active" v-show="training.active.register == 2">{{ training.active.ids.length }}</div>
+                    </div>
+
+                    <div class="basket" title="third basket"
+                         :class="{
+                             active: training.active.register == 3,
+                             disabled: training.active.register != 3 && registerLength[3] == 0
+                         }"
+                         @click="trainRegister(3)">
+                        {{ registerLength[3] }}
+                        <div class="active" v-show="training.active.register == 3">{{ training.active.ids.length }}</div>
+                    </div>
+
+                    <div class="basket" title="third basket"
+                         :class="{
+                             active: training.active.register == 4,
+                             disabled: training.active.register != 4 && registerLength[4] == 0
+                         }"
+                         @click="trainRegister(4)">
+                        {{ registerLength[4] }}
+                        <div class="active" v-show="training.active.register == 4">{{ training.active.ids.length }}</div>
+                    </div>
+                </div>
+
+                <div v-show="training.active.register === null">
+                    <div class="actionBar">
+                        <button class="list" @click="listAll()" v-show="training.active.lesson">List all</button>
+                        <button class="new" @click="createNew()">New vocabulary</button>
+                    </div>
+
+                    <div class="actionBar">
+                        <button class="new" @click="sync($event)" title="Download new/updated vocabularies from the server and upload locally edited ones.">
+                            <span class="up">{{ lastSync ? '(' + lastSync.push.docs_written : '' }}</span>
+                            <span class="arrow">⇅</span>
+                            <span class="down">{{ lastSync ? lastSync.pull.docs_written + ')' : '' }}</span>
+                            Sync</button>
+                        <button class="new" @click="reset($event)" title="Discard all local vocabularies and training status. Fetch new data from server">Reset</button>
+                    </div>
+
+                    <label v-if="exportString">
+                        Export:
+                        <textarea class="export">{{ exportString }}</textarea>
+                    </label>
+                </div>
+            </section>
+
+            <section id="item"
+                     v-show="activeItem"
+                     v-cloak>
+                <div class="card activeItem"
+                     :class="{ isNew: isNew }">
+                    <input id="training.active.id" type="hidden" name="id" v-model.lazy="activeItem._id">
+
+                    <p v-show="isNew || editItem || isMove">
+                        <label>
+                            Lesson:
+
+                            <span class="keep-together">
+                                <select class="lesson" name="lesson"
+                                        v-model="activeItem.lesson"
+                                        @change="updateActiveItem()"
+                                        tabindex="1">
+                                    <option v-for="lesson in lessonsWithCurrent">{{ lesson }}</option>
+                                </select>
+                                <button class="newLesson" type="button" @click="newLesson()" title="Add new lesson">+</button>
+                            </span>
+                        </label>
+                    </p>
+                    <p v-show="!isNew && !editItem && !isMove">
+                        Lesson: {{ activeItem.lesson }}
+                    </p>
+                    <div class="from">
+                        <p :class="{ hasKeyboard: mode.from.keyboard }">
+                            <textarea name="from"
+                                      rows="1"
+                                      tabindex="2"
+                                      :placeholder="mode.from.placeholder"
+                                      v-lang="mode.from"
+                                      v-model.lazy.trim="activeItem[mode.from.phraseKey]"
+
+                                      @blur="updateActiveItem()"
+                                      @keydown.enter.prevent="triggerBlur()"
+                                      @keyup.esc="revertActiveItem()"
+                                      autocomplete="off"></textarea>
+                        </p>
+
+                        <p :class="{ hasKeyboard: mode.from.keyboard }">
+                            <textarea name="fromNote"
+                                      class="note"
+                                      tabindex="3"
+                                      placeholder="notes"
+                                      v-lang="mode.from"
+                                      v-model.lazy.trim="activeItem[mode.from.noteKey]"
+
+                                      @blur="updateActiveItem()"
+                                      @keyup.esc="revertActiveItem()"
+                                      autocomplete="off"></textarea>
+                        </p>
+                    </div>
+
+                    <div class="actionBar" v-show="!isNew && !editItem && isToVisible">
+                        <button type="button" class="big" @click="repeatItem(activeItem._id)">
+                            <span class="arrow">↶</span> Repeat
+                        </button>
+
+                        <button type="button" class="big" @click="gotItem(activeItem._id)">
+                            Got It <span class="arrow">↷</span>
+                        </button>
+                    </div>
+
+                    <div class="actionBar" v-show="!isNew && !editItem && !isToVisible">
+                        <button type="button" class="big" @click="setToVisible">
+                            Show
+                        </button>
+                    </div>
+
+                    <div class="to" v-visible="isToVisible || isNew || editItem">
+                        <p :class="{ hasKeyboard: mode.to.keyboard }">
+                            <textarea name="to"
+                                      rows="1"
+                                      tabindex="4"
+                                      :placeholder="mode.to.placeholder"
+                                      v-lang="mode.to"
+                                      v-model.lazy.trim="activeItem[mode.to.phraseKey]"
+
+                                      @blur="updateActiveItem()"
+                                      @keydown.enter.prevent="triggerBlur()"
+                                      @keyup.esc="revertActiveItem()"
+                                      autocomplete="off"></textarea>
+                        </p>
+
+                        <p :class="{ hasKeyboard: mode.to.keyboard }">
+                            <textarea name="toNote"
+                                      class="note"
+                                      tabindex="5"
+                                      placeholder="notes"
+                                      v-lang="mode.to"
+                                      v-model.lazy.trim="activeItem[mode.to.noteKey]"
+
+                                      @blur="updateActiveItem()"
+                                      @keyup.esc="revertActiveItem()"
+                                      autocomplete="off"></textarea>
+                        </p>
+                    </div>
+
+                    <div class="actionBar" v-show="isNew">
+                        <button type="button" class="big" @click="cancelNew()" tabindex="7">Cancel</button>
+                        <button type="button" class="big" @click="addItem(activeItem)" tabindex="6">Save</button>
+                    </div>
+
+                    <div class="actionBar" v-show="editItem">
+                        <button type="button" class="big" @click="finishEdit()" tabindex="7">Finish & Go Back</button>
+                    </div>
+                </div>
+                <div class="basketBar" :class="{ loading: loading.register }">
+                    <div id="basket1" class="basket" title="first basket"
+                         :class="{
+                             active: training.active.register == 1,
+                             disabled: training.active.register != 1 && registerLength[1] == 0
+                         }"
+                         @click="trainRegister(1)">
+                        {{ registerLength[1] }}
+                        <div class="active" v-show="training.active.register == 1">{{ training.active.ids.length }}</div>
+                    </div>
+
+                    <div id="basket2" class="basket" title="second basket"
+                         :class="{
+                             active: training.active.register == 2,
+                             disabled: training.active.register != 2 && registerLength[2] == 0
+                         }"
+                         @click="trainRegister(2)">
+                        {{ registerLength[2] }}
+                        <div class="active" v-show="training.active.register == 2">{{ training.active.ids.length }}</div>
+                    </div>
+
+                    <div id="basket3" class="basket" title="third basket"
+                         :class="{
+                             active: training.active.register == 3,
+                             disabled: training.active.register != 3 && registerLength[3] == 0
+                         }"
+                         @click="trainRegister(3)">
+                        {{ registerLength[3] }}
+                        <div class="active" v-show="training.active.register == 3">{{ training.active.ids.length }}</div>
+                    </div>
+
+                    <div id="basket4" class="basket" title="third basket"
+                         :class="{
+                             active: training.active.register == 4,
+                             disabled: training.active.register != 4 && registerLength[4] == 0
+                         }"
+                         @click="trainRegister(4)">
+                        {{ registerLength[4] }}
+                        <div class="active" v-show="training.active.register == 4">{{ training.active.ids.length }}</div>
+                    </div>
+                </div>
+
+                <footer class="footer" v-show="!initialText && !isNew" v-cloak>
+                    <div class="actionBar" v-show="activeItem">
+                        <button class="remove" @click="removeItem(activeItem)" title="Remove this vocabulary item permanently">Remove</button>
+
+                        <button v-show="!isMove" class="move" @click="moveItem()" title="Modify the contents">Move</button>
+                        <button v-show="isMove" class="move" @click="cancelMove()" title="Abort moving vocabulary">Cancel Move</button>
+
+                        <button class="new" @click="createNew()" title="Create a new vocabulary item">New</button>
+                    </div>
+
+                    <div class="actionBar" v-show="activeItem && !editItem">
+                        <button class="abort" @click="resetTrainingRegister()" title="Abort current training session"><span class="arrow">←</span> Stop training</button>
+                    </div>
+                </footer>
+            </section>
+        </div>
+
+        <div id="keyboard"></div>
+
+        <script src="bower_components/pouchdb/dist/pouchdb.min.js"></script>
+        <script src="bower_components/vue/dist/vue.js"></script>
+        <script src="bower_components/autosize/dist/autosize.min.js"></script>
+        <script src="vkboard/1-vkboard/vkboard.js"></script>
+        <script src="js/plugins.js"></script>
+        <script src="js/keyboard.js"></script>
+        <script src="js/main.js"></script>
+    </body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "vocularry",
+  "authors": [
+    "Robert Koch <robert.koch@loggia.at>"
+  ],
+  "description": "Learning vocabularies with basket system",
+  "main": "index.html",
+  "license": "MIT",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "pouchdb": "^6.1.0",
+    "vue": "^2.1.4",
+    "autosize": "*"
+  }
+}
